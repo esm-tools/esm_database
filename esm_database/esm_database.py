@@ -1,49 +1,61 @@
-import sys
+import sys, os
 from . import getch
+import datetime
 
 class DisplayDatabase():
 
     def __init__(self, tablename):
-        if tablename == "experiments":
+        if tablename == "experiments":         # that needs to disappear
             from esm_runscripts import database
             self.entry_type = database.experiment
         else:
             print ("Unknown table, quitting...")
             sys.exit(-1)
 
+        self.session = database.session
         query = database.session.query(database.experiment)
         results = query.all()
         if not type(results) == list:
             results=[results]
 
+        self.query = query
         self.verbose = False
         self.all_results = results
         self.results = results
         table = getattr(self.entry_type, "__table__")
         columns = getattr(table, "columns")
         self.columns = [str(column).replace(tablename+".", "") for column in columns]
+        self.last_message = ""
 
         while True:
             self.output_writer()
             self.decision_maker()
 
 
+
+
+
     def output_writer(self):
-        print()
+        lines_of_terminal = os.get_terminal_size().lines
+
+        for line in range(0, lines_of_terminal):
+            print()
         if not self.verbose:
             getattr(self.entry_type, "topline")()
-            #topline()
         for result in self.results:
             if self.verbose:
                 getattr(self.entry_type, "nicer_output")(result)
             else:
                 print (result)
         print ("------------------------------------------------------------------------------------------------------------------------------")
-        print ("[S]elect Entry     [V]erbose on/off     [R]eset selection    [Edit] Entry                                               [Q]uit")
+        print ("[S]elect Entry        [V]erbose on/off        [R]eset selection        [E]dit Entry        [D]elete Entry               [Q]uit")
         print ("------------------------------------------------------------------------------------------------------------------------------")
-   
+        print (self.last_message)
+        print ("")
 
-    def ask_column(self:)
+
+
+    def ask_column(self):
         find = input("Which column " + str(self.columns) + "? ").lower()
 
         if find == "":
@@ -61,82 +73,157 @@ class DisplayDatabase():
         return find_column
 
 
+
+
+
+
+    def ask_dataset(self):
+        edit_id = None
+        if len(self.results) == 0:
+            return None
+
+        elif len(self.results) == 1:
+            print ("Select entry id=" + str(self.results[0].id) + " [y/n]?")
+                
+            yesno = getch.get_one_of(["y", "Y", "n", "N"])
+            if yesno.lower() == "y":
+                edit_id = self.results[0].id
+                edit_dataset = self.results[0]
+
+        if not edit_id:
+            edit_id = input("Please enter dataset id: ")
+            if edit_id == "":
+                return None
+            try:
+                edit_id = int(edit_id)
+            except:
+                print ("id needs to be of type int.")
+                return None
+            edit_dataset = [result for result in self.all_results if result.id == edit_id]
+            if edit_dataset == []:
+                print ("Unknown dataset id.")
+                return None
+            else:
+                edit_dataset = edit_dataset[0]
+
+        return edit_dataset
+
+
+
+
     def decision_maker(self):
-        while True:
-            char = getch.getch().lower()
-            if char == "q":
-                sys.exit(0)
+        char = getch.get_one_of(["q", "Q", "v", "V", "s", "S", "e", "E", "r", "R", "D"])
 
-            elif char == "v":
-                self.verbose = not self.verbose
-                break
+        if char.lower() == "q":
+            sys.exit(0)
 
-            elif char == "s":
-                find_column = self.ask_column()
+        elif char.lower() == "v":
+            self.verbose = not self.verbose
 
-                if not find_column:
-                    break
-            
-                find_value = input("Search for? ")
-                if find_value == "": 
-                    break
-            
-                self.select_stuff(find_column, find_value)
-                break
+        elif char.lower() == "s":
+                self.select_stuff()
 
-            elif char == "e":
-                if len[self.results] == 0:
-                    break
-                elif len[self.results] == 1:
-                    print ("Edit entry with id=" + self.results[0].id + " [y/n]?")
-                    while True:
-                        yesno = getch.getch().lower()
-                        if yesno in ["y", "n"]:
-                            break
-                    if yesno == "y":
-                        edit_id = self.results[0].id
-                        edit_dataset = self.results[0]
+        elif char.lower() == "e":
+            self.edit_dataset()
 
-                if not edit_id:
-                    edit_id = int(input("Please enter id of the dataset you want to edit: "))
-                    edit_dataset = [result in self.all_results if result.id == edit_id]
-                    if edit_dataset == []:
-                        print ("Unknown dataset id.")
-                        break
-                    else:
-                        edit_dataset = edit_dataset[0]
+        elif char.lower() == "r":
+            self.results = self.all_results
 
-                self.edit_dataset(edit_id, edit_dataset)
-                break    
-
-            elif char == "r":
-                self.results = self.all_results
-                break
+        elif char == "D":
+            self.remove_datasets()
 
 
-    def edit_dataset(edit_id, edit_dataset):
-        edit = input("Which column " + str(self.columns) + "? ").lower()
 
-        if edit == "":
+
+
+
+
+
+    def remove_datasets(self):
+        all_ids = [result.id for result in self.results]
+        print ("Really remove entry/entries " + str(all_ids) + " [Y/n]? ")
+        really = getch.get_one_of(["Y", "n", "N"]) 
+        if really == "Y":
+            for this_id in all_ids:
+                self.query.filter_by(id = this_id).delete()
+            self.session.commit()
+
+            self.all_results = [result for result in self.all_results if result.id not in all_ids]
+            self.results = self.all_results
+
+
+
+
+
+
+
+
+
+    def edit_dataset(self):
+        edit_dataset = self.ask_dataset()
+        if not edit_dataset:
             return
 
-        for column in self.columns:
-            if column.startswith(edit):
-                find_column = column 
-                break
-
-        if not find_column:
-            print ("Unknown column.")
+        edit_column = self.ask_column()
+        if not edit_column:
             return
+        column_type = type(getattr(self.all_results[0], edit_column))
 
         edit_entry = input("Change to? ")
         if edit_entry == "": 
-            break
+            return
             
+        # try to convert user input
+        if column_type == int:
+            try:
+                edit_entry = int(edit_entry)
+            except:
+                print("Wrong data type, should be int!")
+                return
+        elif column_type == datetime.datetime:
+            try:
+                edit_entry = datetime.datetime(edit_entry)
+            except:
+                print("Wrong data type, should be datetime.datetime!")
+                return
+
+
+        this_entry = self.query.filter_by(id = edit_dataset.id)
+        try:
+            setattr(this_entry, edit_column, edit_entry)
+            self.session.commit()
+        except:
+            print("Problem changing column " + edit_column + " of dataset " + str(edit_dataset.id) + ". ")
+            return
+
+        new_results = []
+        new_all_results = []
+        for result in self.all_results:
+            need_this = False
+            if result in self.results:
+                need_this = True
+            if result == edit_dataset:
+                setattr(result, edit_column, edit_entry)
+            new_all_results += [result]
+            if need_this:
+                new_results += [result]
+        self.results = new_results
+        self.all_results = new_all_results
 
 
 
-    def select_stuff(self, find_column, find_value):
+
+
+
+    def select_stuff(self):
+        find_column = self.ask_column()
+        if not find_column:
+            return
+            
+        find_value = input("Search for? ")
+        if find_value == "": 
+            return
+            
         if find_column and find_value:
             if find_column == "id":
                 self.results = [result for result in self.results if find_value == str(getattr(result, find_column))]
@@ -144,8 +231,3 @@ class DisplayDatabase():
                 self.results = [result for result in self.results if find_value in str(getattr(result, find_column))]
 
 
-
-    #output_writer(database, verbose, results)
-    #decision_maker(table, find, verbose, columns)
-    #DisplayDatabase(table, find, verbose)
-       

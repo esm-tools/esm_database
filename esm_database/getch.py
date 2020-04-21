@@ -9,6 +9,12 @@ screen."""
 
     def __call__(self): return self.impl()
 
+def get_one_of(testlist):
+    while True:
+        char = getch()
+        if char in testlist:
+            return char
+
 
 class _GetchUnix:
     def __init__(self):
@@ -36,3 +42,5 @@ class _GetchWindows:
 
 
 getch = _Getch()
+
+
