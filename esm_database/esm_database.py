@@ -7,8 +7,12 @@ class DisplayDatabase():
     def __init__(self, tablename = None):
 
         from . import location_database
+
         query = location_database.session.query(location_database.database_location)
         results = query.all()
+        if len(results) == 0:
+            print("No tables registered, sorry...")
+            sys.exit(-1)
 
         all_tablenames = [result.table_name for result in results] 
 
