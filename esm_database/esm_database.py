@@ -188,7 +188,7 @@ class DisplayDatabase():
                 return
 
 
-        this_entry = self.query.filter_by(id = edit_dataset.id)
+        this_entry = self.query.filter_by(id = edit_dataset.id).first()
         try:
             setattr(this_entry, edit_column, edit_entry)
             self.session.commit()
