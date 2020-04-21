@@ -32,6 +32,11 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     description="All the stuff for database access needed for ESMTools",
+    entry_points={
+        'console_scripts': [
+            'esm_database=esm_database.cli:main',
+        ],
+    },
     install_requires=requirements,
     license="GNU General Public License v2",
     long_description=readme + '\n\n' + history,

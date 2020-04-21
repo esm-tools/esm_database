@@ -1,105 +1,151 @@
-#!/usr/bin/env python3
+import sys
+from . import getch
 
-import os, sys
-import sqlite3
-import datetime
+class DisplayDatabase():
 
-class sqlite3_database:
-    def __init__(self, filename, tablename, sample):
-        self.conn = sqlite3.connect(filename)
-        self.cursor = self.conn.cursor()
-        self.tablename = tablename
-        self.sample = sample
+    def __init__(self, tablename):
+        if tablename == "experiments":
+            from esm_runscripts import database
+            self.entry_type = database.experiment
+        else:
+            print ("Unknown table, quitting...")
+            sys.exit(-1)
 
-        if not os.path.isfile(filename):
-            self.create_new_table()
-        elif not self.table_exists():
-            self.create_new_table()
+        query = database.session.query(database.experiment)
+        results = query.all()
+        if not type(results) == list:
+            results=[results]
 
+        self.verbose = False
+        self.all_results = results
+        self.results = results
+        table = getattr(self.entry_type, "__table__")
+        columns = getattr(table, "columns")
+        self.columns = [str(column).replace(tablename+".", "") for column in columns]
 
-    def create_new_table(self):
-        print (creating_new_message)
-        self.cursor.execute("CREATE TABLE " + self.tablename + self.layout_nocase())
-
-    def table_exists(self):
-        self.cursor.execute("SELECT count(name) FROM sqlite_master WHERE type='table' AND name='" + self.tablename + "'") 
-        if self.cursor.fetchone()[0] == 0:
-            return False
-        return True
-
-    def display_whole_database(self):
-        sql = "SELECT * FROM " + self.tablename
-        self.cursor.execute(sql)
-        print (self.cursor.fetchall())
-
-    def submit_query(self, query):
-        rows = self.cursor.execute(query)
-        if "INSERT" in query:
-            self.conn.commit()
-        return rows
-
-    def all_info(self):
-        rows = self.cursor.execute("SELECT * FROM " + self.tablename)
-        return rows
-
-    def layout(self):
-        sep = ""
-        layout = "("
-        for entry in list(self.sample.types):
-            layout += sep + entry + " " + self.sample.types[entry]
-            sep = ", "
-        layout += ")"
-        return layout
-
-    def layout_nocase(self):
-        sep = ""
-        layout = "("
-        for entry in list(self.sample.types):
-            layout += sep + entry + " " + self.sample.types[entry] + " COLLATE NOCASE"
-            sep = ", "
-        layout += ")"
-        return layout
-
-    def values(self, entry):
-        sep = ""
-        values = " VALUES ('"
-        for listentry in list(entry.values):
-            values = values + sep + entry.values[listentry]
-            sep = "', '"
-        values = values + "')"
-        return values
-
-    def new_entry(self, entry):
-        query = "INSERT INTO " + self.tablename + self.values(entry)
-        return query
-
-    def last_entry(self, searchfor, searchwhere, searchlike):
-        query = self.search_query(searchfor, searchwhere, searchlike)
-        entries = self.submit_query(query)
-        if type(entries) == list:
-            return entries[-1]
-        return ""
-
-    def search_query(self, searchfor, searchwhere, searchlike):
-        query = "SELECT " + searchfor + " FROM " +  self.tablename + " WHERE " + searchwhere + " LIKE '%" + searchlike + "%'"
-        return query
-
-    def timestamp(self):
-        this_datetime = datetime.datetime.now()
-        date = this_datetime.strftime("%Y-%m-%d")
-        time = this_datetime.strftime("%H:%M")
-        return date, time
+        while True:
+            self.output_writer()
+            self.decision_maker()
 
 
+    def output_writer(self):
+        print()
+        if not self.verbose:
+            getattr(self.entry_type, "topline")()
+            #topline()
+        for result in self.results:
+            if self.verbose:
+                getattr(self.entry_type, "nicer_output")(result)
+            else:
+                print (result)
+        print ("------------------------------------------------------------------------------------------------------------------------------")
+        print ("[S]elect Entry     [V]erbose on/off     [R]eset selection    [Edit] Entry                                               [Q]uit")
+        print ("------------------------------------------------------------------------------------------------------------------------------")
+   
+
+    def ask_column(self:)
+        find = input("Which column " + str(self.columns) + "? ").lower()
+
+        if find == "":
+            return None
+
+        for column in self.columns:
+            if column.startswith(find):
+                find_column = column
+                break
+
+        if not find_column:
+            print ("Unknown column.")
+            return None
+
+        return find_column
+
+
+    def decision_maker(self):
+        while True:
+            char = getch.getch().lower()
+            if char == "q":
+                sys.exit(0)
+
+            elif char == "v":
+                self.verbose = not self.verbose
+                break
+
+            elif char == "s":
+                find_column = self.ask_column()
+
+                if not find_column:
+                    break
+            
+                find_value = input("Search for? ")
+                if find_value == "": 
+                    break
+            
+                self.select_stuff(find_column, find_value)
+                break
+
+            elif char == "e":
+                if len[self.results] == 0:
+                    break
+                elif len[self.results] == 1:
+                    print ("Edit entry with id=" + self.results[0].id + " [y/n]?")
+                    while True:
+                        yesno = getch.getch().lower()
+                        if yesno in ["y", "n"]:
+                            break
+                    if yesno == "y":
+                        edit_id = self.results[0].id
+                        edit_dataset = self.results[0]
+
+                if not edit_id:
+                    edit_id = int(input("Please enter id of the dataset you want to edit: "))
+                    edit_dataset = [result in self.all_results if result.id == edit_id]
+                    if edit_dataset == []:
+                        print ("Unknown dataset id.")
+                        break
+                    else:
+                        edit_dataset = edit_dataset[0]
+
+                self.edit_dataset(edit_id, edit_dataset)
+                break    
+
+            elif char == "r":
+                self.results = self.all_results
+                break
+
+
+    def edit_dataset(edit_id, edit_dataset):
+        edit = input("Which column " + str(self.columns) + "? ").lower()
+
+        if edit == "":
+            return
+
+        for column in self.columns:
+            if column.startswith(edit):
+                find_column = column 
+                break
+
+        if not find_column:
+            print ("Unknown column.")
+            return
+
+        edit_entry = input("Change to? ")
+        if edit_entry == "": 
+            break
+            
 
 
 
-##########################################################################################
+    def select_stuff(self, find_column, find_value):
+        if find_column and find_value:
+            if find_column == "id":
+                self.results = [result for result in self.results if find_value == str(getattr(result, find_column))]
+            else:
+                self.results = [result for result in self.results if find_value in str(getattr(result, find_column))]
 
 
 
-#class database(sqlite3_database):
-#    pass
-
-
-
+    #output_writer(database, verbose, results)
+    #decision_maker(table, find, verbose, columns)
+    #DisplayDatabase(table, find, verbose)
+       
