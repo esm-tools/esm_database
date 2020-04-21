@@ -25,7 +25,6 @@ class DisplayDatabase():
         table = getattr(self.entry_type, "__table__")
         columns = getattr(table, "columns")
         self.columns = [str(column).replace(tablename+".", "") for column in columns]
-        self.last_message = ""
 
         while True:
             self.output_writer()
@@ -50,9 +49,6 @@ class DisplayDatabase():
         print ("------------------------------------------------------------------------------------------------------------------------------")
         print ("[S]elect Entry        [V]erbose on/off        [R]eset selection        [E]dit Entry        [D]elete Entry               [Q]uit")
         print ("------------------------------------------------------------------------------------------------------------------------------")
-        print (self.last_message)
-        print ("")
-
 
 
     def ask_column(self):
