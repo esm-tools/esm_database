@@ -17,7 +17,7 @@ from .esm_database import *
 def parse_shargs():
     """ The arg parser for interactive use """
     parser = argparse.ArgumentParser()
-    parser.add_argument("table", default="experiments")
+    parser.add_argument("table", nargs='?', default=None)
 
     parser.add_argument(
         "-f", "--find", help="Find keyword", default=None

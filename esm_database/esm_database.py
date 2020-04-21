@@ -4,14 +4,57 @@ import datetime
 
 class DisplayDatabase():
 
-    def __init__(self, tablename):
-        if tablename == "experiments":         # that needs to disappear
-            from esm_runscripts import database
-            self.entry_type = database.experiment
-        else:
-            print ("Unknown table, quitting...")
-            sys.exit(-1)
+    def __init__(self, tablename = None):
 
+        from . import location_database
+        query = location_database.session.query(location_database.database_location)
+        results = query.all()
+
+        all_tablenames = [result.table_name for result in results] 
+
+        if not tablename:
+            pass
+        elif tablename not in all_tablenames:
+            print ("Unknown table name.")
+            tablename = None
+
+        if not tablename:
+            print ("Please choose one of the following tables:")
+            for result in results:
+                print (result)
+            while True:
+                choice = input("ID (q to quit): ")
+                if choice in ["q", "Q"]:
+                    sys.exit(0)
+                try:
+                    choice = int(choice)
+                    tablename = [result.table_name for result in results if result.id == choice]
+                    if tablename == []:
+                        print ("ID not valid.")
+                    else:
+                        tablename = str(tablename[0])
+                        break
+                except:
+                    print ("ID needs to be of type integer, please try again...")
+
+        print (tablename)
+
+        table = [table for table in results if tablename == table.table_name]
+        table = table[0]
+
+        package = __import__(table.class_in)
+        database = getattr(package, "database")
+        self.entry_type = getattr(database, tablename)
+
+        #sys.exit(0)
+#
+#        if tablename == "experiments":         # that needs to disappear
+##            from esm_runscripts import database
+#            self.entry_type = database.experiment
+#        else:
+#            print ("Unknown table, quitting...")
+#            sys.exit(-1)
+#
         self.session = database.session
         query = database.session.query(database.experiment)
         results = query.all()
