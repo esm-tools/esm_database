@@ -10,7 +10,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
+requirements = ["sqlalchemy" ]
 
 setup_requirements = [ ]
 
@@ -48,6 +48,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/dbarbi/esm_database',
-    version='3.1.0',
+    version='3.1.2',
     zip_safe=False,
 )

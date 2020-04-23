@@ -4,7 +4,9 @@ from sqlalchemy.orm import sessionmaker
 
 import os
 
-main_database_file = os.path.expanduser("~") + "/.esmtoolsdb"
+main_database_file = os.path.expanduser("~") + "/.esm_tools/esmtools.db"
+if not os.path.isdir(os.path.expanduser("~") + "/.esm_tools"):
+    os.mkdir(os.path.expanduser("~") + "/.esm_tools")
 
 engine = create_engine('sqlite:///' + main_database_file, echo = True)
 base = declarative_base()
