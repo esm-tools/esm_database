@@ -6,7 +6,7 @@ import os
 
 main_database_file = os.path.expanduser("~") + "/.esmtoolsdb"
 
-engine = create_engine('sqlite:///' + main_database_file, echo = False)
+engine = create_engine('sqlite:///' + main_database_file, echo = True)
 base = declarative_base()
 
 class database_location(base):
@@ -23,12 +23,12 @@ class database_location(base):
         print("Databases:")
         print('{0: >4}'.format('ID')                     + "   " + 
                 '{0: >17}'.format('table_name')          + "   " +
-                '{0: >45}'.format('location')            + "   " + 
+                '{0: >60}'.format('location')            + "   " + 
                 '{0: >17}'.format('class_in')
                 )
 
     def __repr__(self):
-        return "%4s   %17s   %45s   %17s"  % (
+        return "%4s   %17s   %85s   %17s"  % (
                 str(self.id), 
                 str(self.table_name),
                 str(self.location),

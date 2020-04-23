@@ -60,7 +60,7 @@ class DisplayDatabase():
 #            sys.exit(-1)
 #
         self.session = database.session
-        query = database.session.query(database.experiment)
+        query = database.session.query(self.entry_type)
         results = query.all()
         if not type(results) == list:
             results=[results]
